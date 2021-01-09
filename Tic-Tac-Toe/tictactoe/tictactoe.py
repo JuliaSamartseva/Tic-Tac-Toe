@@ -1,9 +1,13 @@
+import random
+
+
 class Game:
 
-    def __init__(self, symbols_list):
+    def __init__(self, symbols_list, level):
         self.state = "Game not finished"
         self.matrix = []
         self.create_board(symbols_list)
+        self.level = level
 
     def create_board(self, symbols_list):
         symbols_list_iterator = 0
@@ -24,6 +28,21 @@ class Game:
             print(" ".join(self.matrix[i]), end=" ")
             print("|")
         print("---------")
+
+    def make_computer_move(self):
+        if self.level == "easy":
+            # find all empty cells
+            empty_cells = list()
+            for i in range(3):
+                for j in range(3):
+                    if self.matrix[i][j] == " ":
+                        empty_cells.append(str(i) + " " + str(j))
+            move = random.choice(empty_cells)
+            x_coordinate, y_coordinate = move.split()
+            x_coordinate = int(x_coordinate)
+            y_coordinate = int(y_coordinate)
+            print('Making move level "easy"')
+            self.make_move(x_coordinate + 1, y_coordinate + 1)
 
     def make_move(self, x_coordinate, y_coordinate):
         o_number = 0
@@ -103,6 +122,11 @@ class Game:
         if not self.check_rows_win() and not self.check_columns_win() and not self.check_diagonal_win():
             self.check_draw()
 
+    def game_ended(self):
+        if self.state == "Game not finished":
+            return False
+        return True
+
 
 class Validation:
 
@@ -137,24 +161,23 @@ class Validation:
         return True
 
 
-while True:
-    input_list = [x for x in input("Enter the cells: > ")]
-    if not Validation.check_board_validity(input_list):
-        print("The cells format is incorrect")
-    else:
-        break
-
-game = Game(input_list)
+game = Game("_________", "easy")
 game.output_board()
 
 while True:
     coordinates = input("Enter the coordinates > ")
-    if Validation.check_move_validity(coordinates, game.matrix):
+    if not Validation.check_move_validity(coordinates, game.matrix):
+        continue
+    x, y = coordinates.split()
+    x = int(x)
+    y = int(y)
+    game.make_move(x, y)
+    game.output_board()
+    if game.game_ended():
+        print(game.state)
         break
-x, y = coordinates.split()
-x = int(x)
-y = int(y)
-game.make_move(x, y)
-game.output_board()
-print(game.state)
-
+    game.make_computer_move()
+    game.output_board()
+    if game.game_ended():
+        print(game.state)
+        break
