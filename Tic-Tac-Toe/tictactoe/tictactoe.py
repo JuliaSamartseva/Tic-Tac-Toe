@@ -2,7 +2,6 @@ import random
 
 
 class Game:
-
     def __init__(self, symbols_list, level):
         self.state = "Game not finished"
         self.matrix = []
@@ -129,6 +128,26 @@ class Game:
 
 
 class Validation:
+    @staticmethod
+    def check_command_validity(command_name):
+        # check exit
+        if command_name == "exit":
+            return True
+
+        # check start
+        try:
+            name, first_player, second_player = command_name.split()
+        except ValueError:
+            print("Bad parameters!")
+            return False
+
+        if name != "start":
+            return False
+        if first_player != "easy" and first_player != "user":
+            return False
+        if second_player != "easy" and second_player != "user":
+            return False
+        return True
 
     @staticmethod
     def check_board_validity(symbols_list):
@@ -161,23 +180,53 @@ class Validation:
         return True
 
 
-game = Game("_________", "easy")
-game.output_board()
+class Player:
+    def __init__(self, option):
+        # user or computer
+        self.option = option
+
+    def make_move(self, tictacgame):
+        if self.option == "user":
+            while True:
+                coordinates = input("Enter the coordinates > ")
+                if not Validation.check_move_validity(coordinates, tictacgame.matrix):
+                    continue
+                x, y = coordinates.split()
+                x = int(x)
+                y = int(y)
+                tictacgame.make_move(x, y)
+                tictacgame.output_board()
+                break
+        if self.option == "easy":
+            tictacgame.make_computer_move()
+            tictacgame.output_board()
+
 
 while True:
-    coordinates = input("Enter the coordinates > ")
-    if not Validation.check_move_validity(coordinates, game.matrix):
+    command = input("Input command: > ")
+
+    if command == "exit":
+        break
+    if not Validation.check_command_validity(command):
         continue
-    x, y = coordinates.split()
-    x = int(x)
-    y = int(y)
-    game.make_move(x, y)
+
+    start, player_one_option, player_two_option = command.split()
+
+    player_one = Player(player_one_option)
+    player_two = Player(player_two_option)
+
+    game = Game("_________", "easy")
     game.output_board()
-    if game.game_ended():
-        print(game.state)
-        break
-    game.make_computer_move()
-    game.output_board()
-    if game.game_ended():
-        print(game.state)
-        break
+    n_turns = 0
+    # game running
+    while True:
+        if n_turns % 2 == 0:
+            player_one.make_move(game)
+        else:
+            player_two.make_move(game)
+
+        n_turns += 1
+        if game.game_ended():
+            print(game.state)
+            print()
+            break
