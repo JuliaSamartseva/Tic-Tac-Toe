@@ -1,12 +1,33 @@
 import random
+from enum import Enum
+
+
+class Level(Enum):
+    CUSTOM = "user"
+    EASY = "easy"
+    MEDIUM = "medium"
+
+
+class State(Enum):
+    X_WIN = "X wins"
+    O_WIN = "O wins"
+    DRAW = "Draw"
+    NOT_FINISHED = "Game not finished"
 
 
 class Game:
-    def __init__(self, symbols_list, level):
-        self.state = "Game not finished"
+    def __init__(self, symbols_list):
+        self.state = State.NOT_FINISHED
         self.matrix = []
         self.create_board(symbols_list)
-        self.level = level
+
+    def output(self):
+        print("---------")
+        for i in range(3):
+            print("|", end=" ")
+            print(" ".join(self.matrix[i]), end=" ")
+            print("|")
+        print("---------")
 
     def create_board(self, symbols_list):
         symbols_list_iterator = 0
@@ -20,28 +41,44 @@ class Game:
                 else:
                     self.matrix[i].append(symbol)
 
-    def output_board(self):
-        print("---------")
+    def get_random_coordinates(self):
+        empty_cells = list()
         for i in range(3):
-            print("|", end=" ")
-            print(" ".join(self.matrix[i]), end=" ")
-            print("|")
-        print("---------")
+            for j in range(3):
+                if self.matrix[i][j] == " ":
+                    empty_cells.append((i, j))
+        # choose random cell from those empty ones
+        return random.choice(empty_cells)
 
-    def make_computer_move(self):
-        if self.level == "easy":
+    def make_computer_move(self, level, player):
+        if level == Level.EASY:
             # find all empty cells
-            empty_cells = list()
-            for i in range(3):
-                for j in range(3):
-                    if self.matrix[i][j] == " ":
-                        empty_cells.append(str(i) + " " + str(j))
-            move = random.choice(empty_cells)
-            x_coordinate, y_coordinate = move.split()
-            x_coordinate = int(x_coordinate)
-            y_coordinate = int(y_coordinate)
+            move = self.get_random_coordinates()
             print('Making move level "easy"')
-            self.make_move(x_coordinate + 1, y_coordinate + 1)
+            self.make_move(move[0], move[1])
+        elif level == Level.MEDIUM:
+            move = self.get_smart_move_coordinates(player)
+            print('Making move level "medium"')
+            self.make_move(move[0], move[1])
+
+    def get_smart_move_coordinates(self, player):
+        for i in range(3):
+            for j in range(3):
+                if self.matrix[i][j] == " ":
+                    # check placing player symbol
+                    self.matrix[i][j] = player.symbol
+                    new_game_state = self.get_game_state()
+                    self.matrix[i][j] = " "
+                    if new_game_state == State(player.symbol + " wins"):
+                        return i, j
+                    # check placing opponent symbol
+                    opponent = "X" if player.symbol == "O" else "X"
+                    self.matrix[i][j] = opponent
+                    self.matrix[i][j] = " "
+                    if new_game_state == State(opponent + " wins"):
+                        return i, j
+
+        return self.get_random_coordinates()
 
     def make_move(self, x_coordinate, y_coordinate):
         o_number = 0
@@ -57,8 +94,8 @@ class Game:
         else:
             user_symbol = "O"
 
-        self.matrix[x_coordinate - 1][y_coordinate - 1] = user_symbol
-        self.update_game_state()
+        self.matrix[x_coordinate][y_coordinate] = user_symbol
+        self.state = self.get_game_state()
 
     def check_rows_win(self):
         for i in range(3):
@@ -69,9 +106,8 @@ class Game:
                     winning_combination = False
                     break
             if winning_combination and previous_symbol != " ":
-                self.state = previous_symbol + " wins"
-                return True
-        return False
+                return State(previous_symbol + " wins")
+        return State.NOT_FINISHED
 
     def check_columns_win(self):
         for j in range(3):
@@ -82,9 +118,8 @@ class Game:
                     winning_combination = False
                     break
             if winning_combination and previous_symbol != " ":
-                self.state = previous_symbol + " wins"
-                return True
-        return False
+                return State(previous_symbol + " wins")
+        return State.NOT_FINISHED
 
     def check_diagonal_win(self):
         previous_symbol = self.matrix[0][0]
@@ -94,8 +129,7 @@ class Game:
                 winning_combination = False
                 break
         if winning_combination and previous_symbol != " ":
-            self.state = previous_symbol + " wins"
-            return True
+            return State(previous_symbol + " wins")
 
         previous_symbol = self.matrix[0][2]
         winning_combination = True
@@ -104,25 +138,28 @@ class Game:
                 winning_combination = False
                 break
         if winning_combination and previous_symbol != " ":
-            self.state = previous_symbol + " wins"
-            return True
+            return State(previous_symbol + " wins")
 
-        return False
+        return State.NOT_FINISHED
 
     def check_draw(self):
         for i in range(3):
             for j in range(3):
                 if self.matrix[i][j] == " ":
-                    return False
-        self.state = "Draw"
-        return True
+                    return State.NOT_FINISHED
+        return State.DRAW
 
-    def update_game_state(self):
-        if not self.check_rows_win() and not self.check_columns_win() and not self.check_diagonal_win():
-            self.check_draw()
+    def get_game_state(self):
+        wins = [self.check_rows_win(), self.check_columns_win(), self.check_diagonal_win()]
+        if all(win is State.NOT_FINISHED for win in wins):
+            return self.check_draw()
+        else:
+            for win in wins:
+                if win is not State.NOT_FINISHED:
+                    return win
 
     def game_ended(self):
-        if self.state == "Game not finished":
+        if self.state == State.NOT_FINISHED:
             return False
         return True
 
@@ -143,9 +180,9 @@ class Validation:
 
         if name != "start":
             return False
-        if first_player != "easy" and first_player != "user":
+        if first_player != "easy" and first_player != "medium" and first_player != "user":
             return False
-        if second_player != "easy" and second_player != "user":
+        if second_player != "easy" and second_player != "medium" and second_player != "user":
             return False
         return True
 
@@ -181,12 +218,13 @@ class Validation:
 
 
 class Player:
-    def __init__(self, option):
+    def __init__(self, option, symbol):
         # user or computer
         self.option = option
+        self.symbol = symbol
 
     def make_move(self, tictacgame):
-        if self.option == "user":
+        if self.option == Level.CUSTOM:
             while True:
                 coordinates = input("Enter the coordinates > ")
                 if not Validation.check_move_validity(coordinates, tictacgame.matrix):
@@ -194,15 +232,16 @@ class Player:
                 x, y = coordinates.split()
                 x = int(x)
                 y = int(y)
-                tictacgame.make_move(x, y)
-                tictacgame.output_board()
+                tictacgame.make_move(x - 1, y - 1)
+                tictacgame.output()
                 break
-        if self.option == "easy":
-            tictacgame.make_computer_move()
-            tictacgame.output_board()
+        elif self.option == Level.EASY or self.option == Level.MEDIUM:
+            tictacgame.make_computer_move(self.option, self)
+            tictacgame.output()
 
 
 while True:
+    # parsing the command
     command = input("Input command: > ")
 
     if command == "exit":
@@ -212,12 +251,15 @@ while True:
 
     start, player_one_option, player_two_option = command.split()
 
-    player_one = Player(player_one_option)
-    player_two = Player(player_two_option)
+    # creating players
+    player_one = Player(Level(player_one_option), "X")
+    player_two = Player(Level(player_two_option), "O")
 
-    game = Game("_________", "easy")
-    game.output_board()
+    # creating the game
+    game = Game("_________")
+    game.output()
     n_turns = 0
+
     # game running
     while True:
         if n_turns % 2 == 0:
@@ -227,6 +269,6 @@ while True:
 
         n_turns += 1
         if game.game_ended():
-            print(game.state)
+            print(game.state.value)
             print()
             break
