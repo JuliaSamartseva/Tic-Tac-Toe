@@ -6,6 +6,7 @@ class Level(Enum):
     CUSTOM = "user"
     EASY = "easy"
     MEDIUM = "medium"
+    HARD = "hard"
 
 
 class State(Enum):
@@ -60,6 +61,18 @@ class Game:
             move = self.get_smart_move_coordinates(player)
             print('Making move level "medium"')
             self.make_move(move[0], move[1])
+        elif level == Level.HARD:
+            move = self.get_minimax_move_coordinates(player)
+            print('Making move level "hard"')
+            self.make_move(move[0], move[1])
+
+    def get_minimax_move_coordinates(self, player):
+        if player.symbol == "X":
+            (m, qx, qy) = self.min_alpha_beta(-2, 2)
+            return qx, qy
+        else:
+            (m, qx, qy) = self.max_alpha_beta(-2, 2)
+            return qx, qy
 
     def get_smart_move_coordinates(self, player):
         for i in range(3):
@@ -163,6 +176,72 @@ class Game:
             return False
         return True
 
+    def max_alpha_beta(self, alpha, beta):
+        maxv = -2
+        px = None
+        py = None
+
+        result = self.get_game_state()
+
+        if result == State.X_WIN:
+            return -1, 0, 0
+        elif result == State.O_WIN:
+            return 1, 0, 0
+        elif result == State.DRAW:
+            return 0, 0, 0
+
+        for i in range(0, 3):
+            for j in range(0, 3):
+                if self.matrix[i][j] == " ":
+                    self.matrix[i][j] = "O"
+                    (m, min_i, in_j) = self.min_alpha_beta(alpha, beta)
+                    if m > maxv:
+                        maxv = m
+                        px = i
+                        py = j
+                    self.matrix[i][j] = " "
+
+                    if maxv >= beta:
+                        return maxv, px, py
+
+                    if maxv > alpha:
+                        alpha = maxv
+
+        return maxv, px, py
+
+    def min_alpha_beta(self, alpha, beta):
+        minv = 2
+        qx = None
+        qy = None
+
+        result = self.get_game_state()
+
+        if result == State.X_WIN:
+            return -1, 0, 0
+        elif result == State.O_WIN:
+            return 1, 0, 0
+        elif result == State.DRAW:
+            return 0, 0, 0
+
+        for i in range(0, 3):
+            for j in range(0, 3):
+                if self.matrix[i][j] == " ":
+                    self.matrix[i][j] = "X"
+                    (m, max_i, max_j) = self.max_alpha_beta(alpha, beta)
+                    if m < minv:
+                        minv = m
+                        qx = i
+                        qy = j
+                    self.matrix[i][j] = " "
+
+                    if minv <= alpha:
+                        return minv, qx, qy
+
+                    if minv < beta:
+                        beta = minv
+
+        return minv, qx, qy
+
 
 class Validation:
     @staticmethod
@@ -180,9 +259,9 @@ class Validation:
 
         if name != "start":
             return False
-        if first_player != "easy" and first_player != "medium" and first_player != "user":
+        if first_player != "easy" and first_player != "medium" and first_player != "hard" and first_player != "user":
             return False
-        if second_player != "easy" and second_player != "medium" and second_player != "user":
+        if second_player != "easy" and second_player != "medium" and second_player != "hard" and second_player != "user":
             return False
         return True
 
@@ -235,7 +314,7 @@ class Player:
                 tictacgame.make_move(x - 1, y - 1)
                 tictacgame.output()
                 break
-        elif self.option == Level.EASY or self.option == Level.MEDIUM:
+        elif self.option == Level.EASY or self.option == Level.MEDIUM or self.option == Level.HARD:
             tictacgame.make_computer_move(self.option, self)
             tictacgame.output()
 
@@ -244,8 +323,11 @@ while True:
     # parsing the command
     command = input("Input command: > ")
 
+    # exit the loop if command is exit (stop the program)
     if command == "exit":
         break
+
+    # repeat the loop if the command validation failed
     if not Validation.check_command_validity(command):
         continue
 
